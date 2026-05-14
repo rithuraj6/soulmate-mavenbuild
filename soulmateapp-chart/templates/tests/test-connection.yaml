@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "soulmateapp-chart.fullname" . }}-test-connection"
+  labels:
+    {{- include "soulmateapp-chart.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "soulmateapp-chart.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never
