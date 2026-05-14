@@ -2,81 +2,74 @@ pipeline{
 
     agent any
 
-    tools{
-        maven 'Maven'
-    }
-
-
     stages{
+
         stage('Build'){
             steps{
                 sh 'mvn clean package'
             }
         }
 
-        stage('Test'){
+        stage('OWASP Scan'){
             steps{
-                sh 'mvn test'
+                sh 'mvn dependency-check:check'
             }
         }
 
+        stage('Trivy Scan'){
+            steps{
+                 sh 'trivy image soulmateapp:v1'
+            }
+        }
 
         stage('SonarQube Analysis'){
             steps{
+
                 withSonarQubeEnv('sonar-server'){
-                    sh'''
+                    sh '''
                     mvn sonar:sonar \
-                    -Dsonar.projectKey=soulmateapp \
+                    -Dsonar.projectKey=soulmateapp
                     '''
                 }
             }
         }
 
-
-        stage('Quality Gate'){
+        stage('Trigger Deploy Pipeline'){
             steps{
-                timeout(time: 2, unit: 'MINUTES'){
-                    waitForQualityGate abortPipeline: true
-                }
+                build job: 'springboot-deploy'
             }
         }
 
-        stage('OWASP Scan'){
-            steps{
-                sh 'mvn dependency-check:check' 
-            }
-        }
+        stage('Trigger Deploy Pipeline') {
 
+        steps {
 
-        stage('Docker Build'){
-            steps{
-                sh 'docker build -t rithuraj6/soulmateapp:v1 .'
-            }
+            echo 'Triggering deploy pipeline now...'
 
+            build job: 'springboot-deploy'
+
+            echo 'Deploy pipeline triggered successfully.'
 
         }
-
-        stage('Trivy Scan'){
-            steps{
-                sh 'trivy image rithuraj6/soulmateapp:v1'
-            }
-        }
-
-        stage('Docker Push'){
-            steps{
-                sh 'docker push rithuraj6/soulmateapp:v1'
-            }
-        }
-
-        
-
-        stage('Cleanup'){
-            steps{
-                sh 'docker rmi rithuraj6/soulmateapp:v1 || true'
-            }
-        }
-
-
+    }
 
     }
+
+    post {
+
+        success {
+            echo 'Build SUCCESSFUL'
+            echo 'Pipeline Job completed successfully. Deploy pipeline triggered now!'
+        }
+
+        failure {
+            echo 'Build FAILED'
+            echo 'Check build logs.'
+        }
+
+        always {
+            echo 'CI Pipeline Finished.'
+        }
+    }
+
 }
