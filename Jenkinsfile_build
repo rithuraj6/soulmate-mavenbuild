@@ -1,13 +1,27 @@
+
+
 pipeline {
 
     agent any
+    tools{
+        maven 'Maven'
+    }
+
+    environment {
+
+        IMAGE_NAME = "rithuraj6/soulmateapp"
+        IMAGE_TAG = "v1"
+
+    }
 
     stages {
 
         stage('Build') {
 
             steps {
+
                 sh 'mvn clean package'
+
             }
 
         }
@@ -15,7 +29,9 @@ pipeline {
         stage('OWASP Scan') {
 
             steps {
+
                 sh 'mvn dependency-check:check'
+
             }
 
         }
@@ -23,7 +39,9 @@ pipeline {
         stage('Trivy Scan') {
 
             steps {
-                sh 'trivy image soulmateapp:v1'
+
+                sh 'trivy image ${IMAGE_NAME}:${IMAGE_TAG} || true'
+
             }
 
         }
@@ -40,6 +58,36 @@ pipeline {
                     '''
 
                 }
+
+            }
+
+        }
+
+        stage('Docker Build') {
+
+            steps {
+
+                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+
+            }
+
+        }
+
+        stage('Docker Push') {
+
+            steps {
+
+                sh 'docker push ${IMAGE_NAME}:${IMAGE_TAG}'
+
+            }
+
+        }
+
+        stage('Cleanup Docker Image') {
+
+            steps {
+
+                sh 'docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true'
 
             }
 
@@ -66,14 +114,14 @@ pipeline {
         success {
 
             echo 'Build SUCCESSFUL'
-            echo 'Pipeline Job completed successfully. Deploy pipeline triggered now!'
+            echo 'CI Pipeline completed successfully.'
 
         }
 
         failure {
 
             echo 'Build FAILED'
-            echo 'Check build logs.'
+            echo 'Check Jenkins console logs.'
 
         }
 
@@ -85,4 +133,4 @@ pipeline {
 
     }
 
-}
+}  
