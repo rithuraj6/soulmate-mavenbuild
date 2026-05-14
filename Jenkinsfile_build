@@ -1,88 +1,64 @@
-pipeline {
+pipeline{
 
     agent any
 
-    stages {
+    stages{
 
-        stage('Build') {
-
-            steps {
+        stage('Build'){
+            steps{
                 sh 'mvn clean package'
             }
-
         }
 
-        stage('OWASP Scan') {
-
-            steps {
+        stage('OWASP Scan'){
+            steps{
                 sh 'mvn dependency-check:check'
             }
-
         }
 
-        stage('Trivy Scan') {
-
-            steps {
-                sh 'trivy image soulmateapp:v1'
+        stage('Trivy Scan'){
+            steps{
+                 sh 'trivy image soulmateapp:v1'
             }
-
         }
 
-        stage('SonarQube Analysis') {
+        stage('SonarQube Analysis'){
+            steps{
 
-            steps {
-
-                withSonarQubeEnv('sonar-server') {
-
+                withSonarQubeEnv('sonar-server'){
                     sh '''
                     mvn sonar:sonar \
                     -Dsonar.projectKey=soulmateapp
                     '''
-
                 }
-
             }
-
         }
 
-        stage('Trigger Deploy Pipeline') {
-
-            steps {
-
-                echo 'Triggering deploy pipeline now...'
-
+        stage('Trigger Deploy Pipeline'){
+            steps{
                 build job: 'springboot-deploy'
-
-                echo 'Deploy pipeline triggered successfully.'
-
             }
-
         }
+
+        
 
     }
 
     post {
 
         success {
-
             echo 'Build SUCCESSFUL'
             echo 'Pipeline Job completed successfully. Deploy pipeline triggered now!'
-
         }
 
         failure {
-
             echo 'Build FAILED'
             echo 'Check build logs.'
-
         }
 
         always {
-
             echo 'CI Pipeline Finished.'
-
         }
-
     }
 
 }
