@@ -10,7 +10,7 @@ pipeline {
     environment {
 
         IMAGE_NAME = "rithuraj6/soulmateapp"
-        IMAGE_TAG = "v1"
+        IMAGE_TAG = "1.0.0"
 
     }
 
