@@ -2,14 +2,369 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Soulmate Result</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --rose:    #f2a7c3;
+            --gold:    #f5d08a;
+            --lavender:#c9aef5;
+            --cream:   #fff8f0;
+            --deep:    #1a0a2e;
+            --flare1:  rgba(245, 208, 138, 0.55);
+            --flare2:  rgba(242, 167, 195, 0.45);
+            --flare3:  rgba(201, 174, 245, 0.4);
+        }
+
+        html, body {
+            width: 100%; height: 100%; overflow: hidden;
+            background: var(--deep);
+            font-family: 'Cormorant Garamond', serif;
+            color: var(--cream);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* ── Starfield ── */
+        #stars {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+        }
+        .star {
+            position: absolute; border-radius: 50%;
+            background: white;
+            animation: twinkle var(--d, 3s) ease-in-out infinite alternate;
+            opacity: 0;
+        }
+        @keyframes twinkle {
+            0%   { opacity: 0; transform: scale(0.6); }
+            100% { opacity: var(--o, 0.8); transform: scale(1.2); }
+        }
+
+        /* ── Liquid blobs ── */
+        .blobs {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            filter: blur(70px) saturate(1.6);
+        }
+        .blob {
+            position: absolute; border-radius: 50%;
+            mix-blend-mode: screen;
+            animation: drift var(--t, 12s) ease-in-out infinite alternate;
+        }
+        .blob-1 { width:520px; height:520px; background:var(--flare2); top:-10%; left:-12%; --t:14s; }
+        .blob-2 { width:440px; height:440px; background:var(--flare3); bottom:-8%; right:-8%; --t:11s; animation-delay:-4s; }
+        .blob-3 { width:360px; height:360px; background:var(--flare1); top:30%; right:15%; --t:16s; animation-delay:-7s; }
+        .blob-4 { width:280px; height:280px; background:rgba(255,255,255,0.12); bottom:20%; left:10%; --t:9s; animation-delay:-2s; }
+
+        @keyframes drift {
+            0%   { transform: translate(0,0) scale(1); }
+            33%  { transform: translate(30px,-40px) scale(1.08); }
+            66%  { transform: translate(-20px,25px) scale(0.94); }
+            100% { transform: translate(15px,10px) scale(1.04); }
+        }
+
+        /* ── Light flares ── */
+        .flares {
+            position: fixed; inset: 0; pointer-events: none; z-index: 1;
+        }
+        .flare {
+            position: absolute; border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, transparent 68%);
+            animation: flareAnim var(--ft,7s) ease-in-out infinite;
+            mix-blend-mode: overlay;
+        }
+        .flare-a { width:180px; height:180px; top:8%; left:12%; --ft:8s; opacity:.35; }
+        .flare-b { width:100px; height:100px; top:20%; right:18%; --ft:5s; animation-delay:-2s; opacity:.5; }
+        .flare-c { width:220px; height:220px; bottom:12%; left:30%; --ft:11s; animation-delay:-5s; opacity:.25; }
+        .flare-d { width:60px;  height:60px;  top:55%; left:55%; --ft:4s;  animation-delay:-1s; opacity:.7; }
+
+        @keyframes flareAnim {
+            0%,100% { transform: scale(1);   opacity: var(--fo, .4); }
+            50%      { transform: scale(1.5); opacity: calc(var(--fo,.4) * 0.4); }
+        }
+
+        /* ── Lens streak ── */
+        .streak {
+            position: fixed; pointer-events: none; z-index: 2;
+            top: 18%; left: -5%;
+            width: 110%; height: 2px;
+            background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, white 50%, var(--rose) 70%, transparent 100%);
+            opacity: 0;
+            transform: rotate(-8deg);
+            animation: streakAnim 6s ease-in-out infinite;
+        }
+        .streak:nth-child(2) { top:72%; transform:rotate(5deg); animation-delay:-3s; }
+
+        @keyframes streakAnim {
+            0%,100% { opacity:0; transform: rotate(-8deg) scaleX(0.4); }
+            50%      { opacity:0.18; transform: rotate(-8deg) scaleX(1); }
+        }
+
+        /* ── Ripple rings ── */
+        .ring-wrap {
+            position: fixed; inset: 0; pointer-events: none; z-index: 1;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .ring {
+            position: absolute; border-radius: 50%; border: 1px solid rgba(255,255,255,0.12);
+            animation: expand var(--rt,8s) ease-out infinite;
+            opacity: 0;
+        }
+        .ring:nth-child(1){ width:300px; height:300px; --rt:8s; }
+        .ring:nth-child(2){ width:300px; height:300px; --rt:8s; animation-delay:-2.6s; }
+        .ring:nth-child(3){ width:300px; height:300px; --rt:8s; animation-delay:-5.2s; }
+
+        @keyframes expand {
+            0%   { transform: scale(0.4); opacity: 0.6; }
+            100% { transform: scale(3.8); opacity: 0; }
+        }
+
+        /* ── Card ── */
+        .card {
+            position: relative; z-index: 10;
+            text-align: center;
+            padding: 56px 60px 48px;
+            background: rgba(255,248,240,0.04);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 24px;
+            backdrop-filter: blur(18px) saturate(1.4);
+            box-shadow:
+                0 0 60px rgba(242,167,195,0.2),
+                0 0 120px rgba(201,174,245,0.1),
+                inset 0 1px 0 rgba(255,255,255,0.18);
+            max-width: 480px; width: 90vw;
+            animation: cardIn 1.6s cubic-bezier(.22,.68,0,1.2) both;
+        }
+        @keyframes cardIn {
+            from { opacity:0; transform: translateY(40px) scale(0.92); }
+            to   { opacity:1; transform: translateY(0) scale(1); }
+        }
+
+        /* card inner glow shimmer */
+        .card::before {
+            content: '';
+            position: absolute; inset: 0; border-radius: inherit;
+            background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, transparent 55%, rgba(245,208,138,0.06) 100%);
+            pointer-events: none;
+        }
+
+        /* ── Ornament ── */
+        .ornament {
+            display: flex; align-items: center; gap: 12px;
+            justify-content: center; margin-bottom: 28px;
+            opacity: 0; animation: fadeUp 1s 0.4s both;
+        }
+        .ornament-line { flex:1; height:1px; background: linear-gradient(90deg, transparent, var(--gold)); max-width:60px; }
+        .ornament-line.right { background: linear-gradient(90deg, var(--gold), transparent); }
+        .ornament-diamond {
+            width: 8px; height: 8px; background: var(--gold);
+            transform: rotate(45deg);
+            box-shadow: 0 0 10px var(--gold), 0 0 20px rgba(245,208,138,0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100%{box-shadow:0 0 8px var(--gold),0 0 18px rgba(245,208,138,.5);} 50%{box-shadow:0 0 18px var(--gold),0 0 40px rgba(245,208,138,.8);} }
+
+        /* ── Heading ── */
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(0.7rem, 2.5vw, 0.85rem);
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: rgba(245,208,138,0.75);
+            margin-bottom: 18px;
+            font-weight: 400;
+            opacity: 0; animation: fadeUp 1s 0.6s both;
+        }
+
+        /* ── Name ── */
+        h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2.8rem, 10vw, 4.2rem);
+            font-weight: 300;
+            font-style: italic;
+            line-height: 1.1;
+            background: linear-gradient(135deg, var(--cream) 0%, var(--gold) 40%, var(--rose) 70%, var(--lavender) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 18px rgba(245,208,138,0.4));
+            opacity: 0; animation: nameReveal 1.2s 1s cubic-bezier(.22,.68,0,1.1) both;
+            position: relative;
+        }
+        @keyframes nameReveal {
+            from { opacity:0; transform: translateY(14px) scale(0.95); letter-spacing: 0.08em; }
+            to   { opacity:1; transform: translateY(0) scale(1); letter-spacing: normal; }
+        }
+
+        /* shimmer sweep on name */
+        h2::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text; background-clip: text;
+            animation: shimmer 4s 2.2s ease-in-out infinite;
+        }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        /* ── Subtitle caption ── */
+        .caption {
+            margin-top: 22px;
+            font-size: 0.82rem;
+            color: rgba(255,248,240,0.4);
+            letter-spacing: 0.12em;
+            font-style: italic;
+            opacity: 0; animation: fadeUp 1s 1.4s both;
+        }
+
+        /* ── Divider ── */
+        .divider {
+            width: 120px; height: 1px; margin: 28px auto 24px;
+            background: linear-gradient(90deg, transparent, var(--rose), var(--lavender), transparent);
+            opacity: 0; animation: fadeUp 1s 1.2s both;
+        }
+
+        /* ── Link ── */
+        a {
+            display: inline-block;
+            font-family: 'Cinzel', serif;
+            font-size: 0.72rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(245,208,138,0.7);
+            text-decoration: none;
+            padding: 11px 32px;
+            border: 1px solid rgba(245,208,138,0.3);
+            border-radius: 40px;
+            position: relative; overflow: hidden;
+            transition: color 0.4s, border-color 0.4s, box-shadow 0.4s;
+            opacity: 0; animation: fadeUp 1s 1.6s both;
+        }
+        a::before {
+            content: '';
+            position: absolute; inset: 0; border-radius: inherit;
+            background: linear-gradient(135deg, rgba(245,208,138,0.15), rgba(242,167,195,0.1));
+            opacity: 0; transition: opacity 0.4s;
+        }
+        a:hover { color: var(--cream); border-color: rgba(245,208,138,0.7); box-shadow: 0 0 24px rgba(245,208,138,0.2); }
+        a:hover::before { opacity: 1; }
+
+        /* ── Floating particles ── */
+        .particles { position:fixed; inset:0; pointer-events:none; z-index:1; }
+        .particle {
+            position: absolute; border-radius:50%; background:white;
+            animation: floatUp var(--pd,10s) linear infinite;
+            opacity:0;
+        }
+        @keyframes floatUp {
+            0%   { transform: translateY(100vh) scale(0); opacity:0; }
+            10%  { opacity: var(--po,.6); }
+            90%  { opacity: var(--po,.6); }
+            100% { transform: translateY(-10vh) scale(1); opacity:0; }
+        }
+
+        @keyframes fadeUp {
+            from { opacity:0; transform: translateY(12px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body>
 
-<h1>Your Soulmate Name Is</h1>
+    <!-- Starfield -->
+    <div id="stars"></div>
 
-<h2 th:text="${soulmateName}"></h2>
+    <!-- Liquid blobs -->
+    <div class="blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="blob blob-4"></div>
+    </div>
 
-<a href="/">Try Again</a>
+    <!-- Lens flares -->
+    <div class="flares">
+        <div class="flare flare-a"></div>
+        <div class="flare flare-b"></div>
+        <div class="flare flare-c"></div>
+        <div class="flare flare-d"></div>
+    </div>
 
+    <!-- Lens streaks -->
+    <div class="flares">
+        <div class="streak"></div>
+        <div class="streak"></div>
+    </div>
+
+    <!-- Ripple rings -->
+    <div class="ring-wrap">
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="ring"></div>
+    </div>
+
+    <!-- Floating particles -->
+    <div class="particles" id="particles"></div>
+
+    <!-- ░░ ORIGINAL WORKING CONTENT — untouched ░░ -->
+    <div class="card">
+        <div class="ornament">
+            <div class="ornament-line"></div>
+            <div class="ornament-diamond"></div>
+            <div class="ornament-line right"></div>
+        </div>
+
+        <h1>Your Soulmate Name Is</h1>
+        <h2 th:text="${soulmateName}">Aria Lumina</h2>
+
+        <div class="divider"></div>
+        <p class="caption">written in the stars, just for you</p>
+
+        <div style="margin-top:32px;">
+            <a href="/">Try Again</a>
+        </div>
+    </div>
+
+    <script>
+        /* Stars */
+        const starEl = document.getElementById('stars');
+        for (let i = 0; i < 160; i++) {
+            const s = document.createElement('div');
+            s.className = 'star';
+            const size = Math.random() * 2.4 + 0.4;
+            s.style.cssText = `
+                width:${size}px; height:${size}px;
+                top:${Math.random()*100}%; left:${Math.random()*100}%;
+                --d:${(Math.random()*4+2).toFixed(1)}s;
+                --o:${(Math.random()*0.7+0.2).toFixed(2)};
+                animation-delay:${(Math.random()*5).toFixed(1)}s;
+            `;
+            starEl.appendChild(s);
+        }
+
+        /* Floating particles */
+        const pEl = document.getElementById('particles');
+        for (let i = 0; i < 28; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            const size = Math.random() * 3 + 1;
+            p.style.cssText = `
+                width:${size}px; height:${size}px;
+                left:${Math.random()*100}%;
+                --pd:${(Math.random()*14+8).toFixed(1)}s;
+                --po:${(Math.random()*0.5+0.1).toFixed(2)};
+                animation-delay:${(Math.random()*12).toFixed(1)}s;
+            `;
+            pEl.appendChild(p);
+        }
+
+        /* Parallax blobs on mouse move */
+        document.addEventListener('mousemove', e => {
+            const cx = e.clientX / window.innerWidth  - 0.5;
+            const cy = e.clientY / window.innerHeight - 0.5;
+            document.querySelectorAll('.blob').forEach((b, i) => {
+                const depth = (i + 1) * 14;
+                b.style.transform = `translate(${cx * depth}px, ${cy * depth}px)`;
+            });
+        });
+    </script>
 </body>
 </html>
